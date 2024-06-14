@@ -1,62 +1,55 @@
-const roomColumns = 16;
-const tileColumns = roomColumns * 2 + 1;
-const wallTile = '#';
-const passageTile = '.';
-const floorTile = ' ';
+const ROOM_COLUMNS = 32;
+const TILE_COLUMNS = ROOM_COLUMNS * 2 + 1;
 
-const coordIndex = ({ x, y }) => y * roomColumns + x;
-const applyDelta = ({ x, y }, { dx, dy }) => ({ x: x + dx, y: y + dy });
-const inBounds = ({ x, y }) => x >= 0 && y >= 0 && x < roomColumns && y < roomColumns;
-const randomChoice = (array) => array[Math.floor(Math.random() * array.length)];
+const PASSAGE_TILE = '.';
+const FLOOR_TILE = ' ';
+const WALL_TILE = '#';
 
-const initializeMapped2DArray = (width, height, mapFn = () => null) =>
-    Array.from({ length: height }, (_, i) => Array.from({ length: width }, (_, j) => mapFn(i, j)));
-
-// Initialize the maze with walls
-const tiles = initializeMapped2DArray(tileColumns, tileColumns, () => wallTile);
-// Initialize room coordinates
-const rooms = initializeMapped2DArray(roomColumns, roomColumns, (x, y) => ({ x: x * 2 + 1, y: y * 2 + 1 }));
+const tiles = Array(TILE_COLUMNS * TILE_COLUMNS)
+    .fill(WALL_TILE);
+const rooms = Array.from({ length: ROOM_COLUMNS * ROOM_COLUMNS }, (_, i) =>
+    (TILE_COLUMNS + 1) * (Math.floor(i / ROOM_COLUMNS) + 1) + i * 2
+);
 
 const visited = new Set();
-const stack = [{ x: 0, y: 0 }];
+const stack = [0]; // room index
 
-const directions = [
-    { dx: 0, dy: -1 }, // Up
-    { dx: 1, dy: 0 }, // Right
-    { dx: 0, dy: 1 }, // Down
-    { dx: -1, dy: 0 } // Left
+const DIRECTIONS = [
+    { dx: 0, dy: -1, condition: (_x, y) => y > 0 }, // Up
+    { dx: 1, dy: 0, condition: (x, _y) => x < ROOM_COLUMNS - 1 }, // Right
+    { dx: 0, dy: 1, condition: (_x, y) => y < ROOM_COLUMNS - 1 }, // Down
+    { dx: -1, dy: 0, condition: (x, _y) => x > 0 } // Left
 ];
 
-const getNeighborData = (current) =>
-{
-    return directions
-        .map(delta => ({ neighbor: applyDelta(current, delta), delta }))
-        .filter(({ neighbor }) => inBounds(neighbor) && !visited.has(coordIndex(neighbor)));
+const getNeighborData = (roomIndex) => {
+    const x = roomIndex % ROOM_COLUMNS;
+    const y = Math.floor(roomIndex / ROOM_COLUMNS);
+
+    return DIRECTIONS
+        .filter(({ condition }) => condition(x, y))
+        .map(({ dx, dy }) => ({ neighbor: roomIndex + dx + dy * ROOM_COLUMNS, dx, dy }))
+        .filter(({ neighbor }) => !visited.has(neighbor));
 };
 
-while (stack.length > 0)
-{
-    const current = stack[stack.length - 1];
-    visited.add(coordIndex(current));
+while (stack.length > 0) {
+    const currentRoomIndex = stack[stack.length - 1];
+    visited.add(currentRoomIndex);
 
-    const { x: roomX, y: roomY } = rooms[current.x][current.y];
-    const neighborData = getNeighborData(current);
+    const neighbors = getNeighborData(currentRoomIndex);
 
-    if (neighborData.length > 0)
-    {
-        const { neighbor, delta } = randomChoice(neighborData);
+    if (neighbors.length > 0) {
+        const { neighbor, dx, dy } = neighbors[Math.floor(Math.random() * neighbors.length)];
         stack.push(neighbor);
 
-        const { x: passageX, y: passageY } = applyDelta(rooms[current.x][current.y], delta);
-        tiles[passageX][passageY] = passageTile;
-    }
-    else
-    {
+        const tileIndex = rooms[currentRoomIndex] + dx + dy * TILE_COLUMNS;
+        tiles[tileIndex] = PASSAGE_TILE;
+    } else {
         stack.pop();
     }
 
-    tiles[roomX][roomY] = floorTile; // Mark the current room as floor
+    tiles[rooms[currentRoomIndex]] = FLOOR_TILE;
 }
 
-// Print the maze
-tiles.forEach(row => console.log(row.join(' ')));
+const formattedTiles = tiles.map((tile, i) => `${tile}${(i + 1) % TILE_COLUMNS === 0 ? '\n' : ' '}`)
+    .join('');
+console.log(formattedTiles);
