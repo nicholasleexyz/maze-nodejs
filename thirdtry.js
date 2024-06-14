@@ -1,4 +1,4 @@
-const roomColumns = 64;
+const roomColumns = 16;
 const tileColumns = roomColumns * 2 + 1;
 const { wallTile, floorTile } = { wallTile: '#', floorTile: '.' };
 
@@ -25,28 +25,32 @@ const checkValid = (coordinate) => checkVisited(coordinate) && checkBounds(coord
 
 const randomChoice = (a) => a[Math.floor(Math.random() * a.length)]
 
-const getNeighborDeltas = (coordinate) => {
+const getNeighborData = (coordinate) =>
+{
     const deltaDirections = [coord(0, -1), coord(1, 0), coord(0, 1), coord(-1, 0)]
 
     return deltaDirections
-        .map((delta) => ({ position: applyDelta(coordinate, delta), delta: delta }))
-        .filter(({ position: p }) => checkValid(p))
-        .map(({ delta: d }) => d)
+        .map((deltaDirection) => ({ neighborCoordinate: applyDelta(coordinate, deltaDirection),
+            neighborDelta: deltaDirection }))
+        .filter(({ neighborCoordinate: neighborCoordinate }) => checkValid(neighborCoordinate))
 }
 
-while (stack.length > 0) {
+while (stack.length > 0)
+{
     const current = stack[stack.length - 1]
     visited.add(coordIndex(current))
 
-    const neighborDeltas = getNeighborDeltas(current)
+    const neighborData = getNeighborData(current)
     const currentRoom = getRoomAt(current)
 
-    if (neighborDeltas.length > 0) {
-        const randNeighborDelta = randomChoice(neighborDeltas)
-        const neighbor = applyDelta(current, randNeighborDelta)
-        stack.push(neighbor)
-        setFloorAt(applyDelta(currentRoom, randNeighborDelta))
-    } else {
+    if (neighborData.length > 0)
+    {
+        const { neighborCoordinate, neighborDelta } = randomChoice(neighborData)
+        stack.push(neighborCoordinate)
+        setFloorAt(applyDelta(currentRoom, neighborDelta))
+    }
+    else
+    {
         stack.pop()
     }
 
